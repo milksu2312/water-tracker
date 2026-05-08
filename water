@@ -1,0 +1,147 @@
+
+<style>
+  .wt-wrap { padding: 1.5rem 0; max-width: 520px; margin: 0 auto; }
+  .wt-goal-row { display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem; }
+  .wt-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .wt-stat { background: var(--color-background-secondary); border-radius: var(--border-radius-md); padding: 0.75rem 1rem; text-align: center; }
+  .wt-stat-val { font-size: 20px; font-weight: 500; color: var(--color-text-primary); }
+  .wt-stat-label { font-size: 12px; color: var(--color-text-secondary); margin-top: 2px; }
+  .wt-bar-wrap { background: var(--color-background-secondary); border-radius: 99px; height: 14px; overflow: hidden; margin-bottom: 0.5rem; }
+  .wt-bar { height: 100%; border-radius: 99px; background: #378ADD; transition: width 0.4s cubic-bezier(.4,0,.2,1); }
+  .wt-pct { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 1.5rem; }
+  .wt-cups { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 1.5rem; }
+  .wt-cup { width: 48px; height: 56px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transition: background 0.2s, border-color 0.2s; background: var(--color-background-primary); }
+  .wt-cup.filled { background: #E6F1FB; border-color: #378ADD; }
+  .wt-cup.filled .wt-cup-icon { color: #185FA5; }
+  .wt-cup-icon { font-size: 22px; color: var(--color-text-secondary); }
+  .wt-cup-ml { font-size: 11px; color: var(--color-text-secondary); margin-top: 2px; }
+  .wt-cup.filled .wt-cup-ml { color: #185FA5; }
+  .wt-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .wt-btn { padding: 8px 18px; font-size: 14px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: transparent; cursor: pointer; color: var(--color-text-primary); transition: background 0.15s; display: flex; align-items: center; gap: 6px; }
+  .wt-btn:hover { background: var(--color-background-secondary); }
+  .wt-btn.primary { background: #185FA5; border-color: #185FA5; color: #fff; }
+  .wt-btn.primary:hover { background: #0C447C; }
+  .wt-btn.danger { color: #A32D2D; border-color: #F09595; }
+  .wt-btn.danger:hover { background: #FCEBEB; }
+  .wt-history { border-top: 0.5px solid var(--color-border-tertiary); padding-top: 1rem; }
+  .wt-history-title { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 0.75rem; }
+  .wt-log { display: flex; flex-direction: column; gap: 6px; max-height: 140px; overflow-y: auto; }
+  .wt-log-item { font-size: 13px; color: var(--color-text-secondary); display: flex; justify-content: space-between; }
+  .wt-log-item span:last-child { color: #185FA5; font-weight: 500; }
+  .wt-success-msg { font-size: 13px; color: #0F6E56; background: #E1F5EE; border-radius: var(--border-radius-md); padding: 8px 12px; margin-bottom: 1rem; display: none; }
+  .wt-success-msg.show { display: block; }
+</style>
+
+<div class="wt-wrap">
+  <h2 class="sr-only">Rastreador de agua diario</h2>
+
+  <div class="wt-goal-row">
+    <i class="ti ti-droplet" style="font-size:22px; color:#378ADD;" aria-hidden="true"></i>
+    <label for="goal-range" style="font-size:14px; color:var(--color-text-secondary); white-space:nowrap;">Meta diaria</label>
+    <input type="range" id="goal-range" min="1000" max="4000" step="250" value="2000" style="flex:1;" oninput="updateGoal(this.value)">
+    <span id="goal-label" style="font-size:14px; font-weight:500; min-width:60px; text-align:right;">2000 ml</span>
+  </div>
+
+  <div class="wt-stats">
+    <div class="wt-stat">
+      <div class="wt-stat-val" id="stat-consumed">0</div>
+      <div class="wt-stat-label">ml tomados</div>
+    </div>
+    <div class="wt-stat">
+      <div class="wt-stat-val" id="stat-remaining">2000</div>
+      <div class="wt-stat-label">ml restantes</div>
+    </div>
+    <div class="wt-stat">
+      <div class="wt-stat-val" id="stat-glasses">0</div>
+      <div class="wt-stat-label">vasos</div>
+    </div>
+  </div>
+
+  <div class="wt-bar-wrap"><div class="wt-bar" id="progress-bar" style="width:0%"></div></div>
+  <div class="wt-pct" id="pct-label">0% de la meta</div>
+
+  <div class="wt-success-msg" id="success-msg">
+    <i class="ti ti-circle-check" aria-hidden="true"></i> ¡Meta alcanzada! Excelente hidratación hoy 🎉
+  </div>
+
+  <div class="wt-cups" id="cups-grid"></div>
+
+  <div class="wt-actions">
+    <button class="wt-btn primary" onclick="addCustom()"><i class="ti ti-plus" aria-hidden="true"></i> Cantidad personalizada</button>
+    <button class="wt-btn danger" onclick="resetAll()"><i class="ti ti-refresh" aria-hidden="true"></i> Reiniciar</button>
+  </div>
+
+  <div class="wt-history">
+    <div class="wt-history-title">Registro de hoy</div>
+    <div class="wt-log" id="log-list"><div style="font-size:13px;color:var(--color-text-secondary);">Sin registros aún.</div></div>
+  </div>
+</div>
+
+<script>
+  const SIZES = [150, 200, 250, 300, 500];
+  let goal = 2000;
+  let consumed = 0;
+  let log = [];
+
+  function updateGoal(val) {
+    goal = parseInt(val);
+    document.getElementById('goal-label').textContent = goal + ' ml';
+    render();
+  }
+
+  function buildCups() {
+    const grid = document.getElementById('cups-grid');
+    grid.innerHTML = '';
+    const count = Math.ceil(goal / 250);
+    const perCup = Math.round(goal / count);
+    const filled = Math.floor(consumed / perCup);
+    for (let i = 0; i < count; i++) {
+      const btn = document.createElement('button');
+      btn.className = 'wt-cup' + (i < filled ? ' filled' : '');
+      btn.setAttribute('aria-label', (i < filled ? 'Vaso lleno' : 'Vaso vacío') + ' ' + perCup + 'ml');
+      btn.innerHTML = `<span class="wt-cup-icon"><i class="ti ${i < filled ? 'ti-glass-full' : 'ti-glass'}" aria-hidden="true"></i></span><span class="wt-cup-ml">${perCup}ml</span>`;
+      btn.onclick = () => { if (i >= filled) addAmount(perCup); };
+      grid.appendChild(btn);
+    }
+  }
+
+  function addAmount(ml) {
+    consumed = Math.min(consumed + ml, goal * 1.5);
+    const now = new Date();
+    const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+    log.unshift({ time, ml });
+    render();
+  }
+
+  function addCustom() {
+    const val = prompt('¿Cuántos ml tomaste?', '200');
+    const n = parseInt(val);
+    if (!isNaN(n) && n > 0) addAmount(n);
+  }
+
+  function resetAll() {
+    consumed = 0;
+    log = [];
+    render();
+  }
+
+  function render() {
+    const pct = Math.min(Math.round((consumed / goal) * 100), 100);
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('pct-label').textContent = pct + '% de la meta';
+    document.getElementById('stat-consumed').textContent = consumed;
+    document.getElementById('stat-remaining').textContent = Math.max(0, goal - consumed);
+    document.getElementById('stat-glasses').textContent = Math.floor(consumed / 250);
+    const msg = document.getElementById('success-msg');
+    msg.className = 'wt-success-msg' + (consumed >= goal ? ' show' : '');
+    buildCups();
+    const logEl = document.getElementById('log-list');
+    if (log.length === 0) {
+      logEl.innerHTML = '<div style="font-size:13px;color:var(--color-text-secondary);">Sin registros aún.</div>';
+    } else {
+      logEl.innerHTML = log.map(e => `<div class="wt-log-item"><span>${e.time}</span><span>+${e.ml} ml</span></div>`).join('');
+    }
+  }
+
+  render();
+</script>
